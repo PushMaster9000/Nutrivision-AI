@@ -7,11 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import connect_db, close_db, initialize_collections, initialize_users_collection
-from app.routes import predict, recipes, auth
+from app.routes import auth, predict, recipes, community, calories
 from app.schemas.schemas import HealthCheckSchema
-from app.routes import auth, recipes, community
-from app.routes import calories 
-
 
 # Application lifecycle management
 @asynccontextmanager
@@ -38,7 +35,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"✗ Error during shutdown: {e}")
 
-
 # Create FastAPI app
 app = FastAPI(
     title="Smart Food Recognition API",
@@ -47,20 +43,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
 # Add CORS middleware for React frontend integration
-# TODO: In production, restrict to specific frontend domain(s)
+# Updated to ["*"] so Vercel can talk to Render without CORS errors!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev server
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Include routes
 app.include_router(auth.router)
@@ -91,7 +82,6 @@ async def health_check() -> HealthCheckSchema:
         version="1.0.0"
     )
 
-
 # Root endpoint
 @app.get("/")
 async def root():
@@ -104,7 +94,6 @@ async def root():
         "docs": "/docs",
         "health": "/health"
     }
-
 
 if __name__ == "__main__":
     import uvicorn

@@ -20,14 +20,21 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
     """
     Main prediction endpoint.
     Receives base64 image from React, forwards as multipart file to Sam's Colab tunnel,
-    fetches nutritional info, and returns matching recipes.
+    fetches nutritional info, and returns matching recipes + scientific metadata.
     """
     try:
+        # We will store Sam's raw JSON here so we can extract the science stats later
+        ml_data = {}
+
         # Step 1: Predict the food
         if request.food_name:
             # Deterministic testing mode (skips ML)
             predicted_food = request.food_name.lower()
             confidence = 1.0
+            volume_data = 0.0
+            mass_data = 0.0
+            kalman_data = None
+            meta_data = None
         else:
             # LIVE ML MICROSERVICE MODE
             ngrok_url = ML_CONFIG.get("ngrok_url")
@@ -57,28 +64,22 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
 
             # Forward to Sam's Colab tunnel as a multipart/form-data file
             try:
-                # requests automatically sets the multipart headers when using 'files'
                 files = {"file": ("food_image.jpg", image_bytes, "image/jpeg")}
                 
-                # Sam specifically asked for a POST to [NGROK_URL]/predict
                 colab_response = requests.post(
                     f"{ngrok_url}/predict", 
                     files=files, 
-                    timeout=20  # Giving Colab 20 seconds to process the heavy YOLO/MiDaS models
+                    timeout=20  # Giving Colab 20 seconds to process YOLO/MiDaS
                 )
                 colab_response.raise_for_status()
                 
-                # Parse Sam's JSON answer
+                # Parse Sam's JSON answer securely inside the network block
                 ml_data = colab_response.json()
-                
-                # Extract the food name (Fallback to 'apple' if the key name doesn't match exactly)
-                predicted_food = ml_data.get("food", ml_data.get("class", "apple")).lower()
-                confidence = float(ml_data.get("confidence", 0.95))
 
             except requests.exceptions.ConnectionError:
                 raise HTTPException(
                     status_code=502, 
-                    detail="Could not connect to the ML engine. Sam's ngrok tunnel might be offline or the URL changed."
+                    detail="Could not connect to the ML engine. Sam's ngrok tunnel might be offline."
                 )
             except requests.exceptions.Timeout:
                 raise HTTPException(
@@ -90,6 +91,41 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
                     status_code=502, 
                     detail=f"Error reading from Colab microservice: {str(e)}"
                 )
+
+            # ========================================================
+            # EVALUATE DATA OUTSIDE THE NETWORK ERROR BLOCK
+            # ========================================================
+            print("\n=== RAW DATA FROM SAM ===")
+            print(ml_data)
+            print("=========================\n")
+            
+            # 1. Check if Sam sent his dictionary error message
+            if isinstance(ml_data, dict) and "error" in ml_data:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Colab ML Engine: {ml_data['error']}. Try a clearer photo!"
+                )
+            
+            # 2. Check if Sam sent a successful list of predictions
+            elif isinstance(ml_data, list) and len(ml_data) > 0:
+                first_item = ml_data[0] # Grab the first food it found
+                predicted_food = first_item.get("food", first_item.get("class", "apple")).lower()
+                confidence = float(first_item.get("confidence", 0.95))
+                
+                # Extract the scientific fields from the first item
+                volume_data = first_item.get("volume", 0.0)
+                mass_data = first_item.get("mass", 0.0)
+                kalman_data = first_item.get("kalman_filter")
+                meta_data = first_item.get("metadata")
+                
+            # 3. Fallback if the data is completely scrambled
+            else:
+                predicted_food = "apple"
+                confidence = 1.0
+                volume_data = 0.0
+                mass_data = 0.0
+                kalman_data = None
+                meta_data = None
 
         # Step 2: Fetch food information from MongoDB
         food_info = CalorieService.get_food_by_name(predicted_food)
@@ -107,17 +143,22 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
             health_constraints=request.health_constraints if request.health_constraints else None
         )
         
-        # Step 4: Build and return the final payload to React
+        # Step 4: Build and return the final payload to React (Including Scientific Data!)
         response = PredictionResponseSchema(
             detected_food=predicted_food,
             confidence=confidence,
             food_info=food_info,
-            matching_recipes=matching_recipes
+            matching_recipes=matching_recipes,
+            volume_cm3=volume_data,
+            mass_grams=mass_data,
+            kalman_stats=kalman_data,
+            ml_metadata=meta_data
         )
         
         return response
     
     except HTTPException:
+        # This allows our 400 Bad Request to bubble up to the frontend perfectly
         raise
     except Exception as e:
         raise HTTPException(
@@ -131,17 +172,29 @@ async def get_food_info(food_name: str):
     """Get detailed information about a specific food."""
     try:
         food_info = CalorieService.get_food_by_name(food_name)
+        
         if not food_info:
-            raise HTTPException(status_code=404, detail=f"Food '{food_name}' not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Food '{food_name}' not found"
+            )
+        
         return food_info
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching food info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching food info: {str(e)}"
+        )
 
 
 @router.get("/recipes/{food_name}", response_model=list)
-async def get_food_recipes(food_name: str, appliances: str = None, health_tags: str = None):
+async def get_food_recipes(
+    food_name: str,
+    appliances: str = None,
+    health_tags: str = None
+):
     """Get recipes for a specific food with optional filtering."""
     try:
         available_appliances = appliances.split(",") if appliances else []
@@ -152,42 +205,62 @@ async def get_food_recipes(food_name: str, appliances: str = None, health_tags: 
             available_appliances=available_appliances,
             health_constraints=health_constraints
         )
+        
         return recipes
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching recipes: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching recipes: {str(e)}"
+        )
 
 
 @router.get("/foods", response_model=list)
 async def list_all_foods():
     """Get list of all available foods."""
     try:
-        return CalorieService.get_all_foods()
+        foods = CalorieService.get_all_foods()
+        return foods
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching foods: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching foods: {str(e)}"
+        )
 
 
 @router.get("/recipes", response_model=list)
 async def list_all_recipes():
     """Get list of all available recipes."""
     try:
-        return RecipeService.get_all_recipes()
+        recipes = RecipeService.get_all_recipes()
+        return recipes
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching recipes: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching recipes: {str(e)}"
+        )
 
 
 @router.get("/low-calorie", response_model=list)
 async def get_low_calorie_foods(max_calories: float = 50):
     """Get foods with calories below a threshold."""
     try:
-        return CalorieService.get_low_calorie_foods(max_calories)
+        foods = CalorieService.get_low_calorie_foods(max_calories)
+        return foods
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching low-calorie foods: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching low-calorie foods: {str(e)}"
+        )
 
 
 @router.get("/low-sugar", response_model=list)
 async def get_low_sugar_foods():
     """Get foods suitable for diabetic diets."""
     try:
-        return CalorieService.get_low_sugar_foods()
+        foods = CalorieService.get_low_sugar_foods()
+        return foods
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching low-sugar foods: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching low-sugar foods: {str(e)}"
+        )

@@ -2,8 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Camera, Upload, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
-// Replace this with your actual Hugging Face or Local URL
-const API_BASE_URL = "http://localhost:8000"; 
+// Automatically switches between local dev and Vercel production
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:8000'); 
 
 export default function CameraUpload({ appliances, constraints, onResult }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -62,6 +62,7 @@ export default function CameraUpload({ appliances, constraints, onResult }) {
         onResult(response.data);
       } catch (error) {
         console.error("Prediction Error:", error);
+        // This perfectly catches Sam's ML errors from our backend!
         alert(error.response?.data?.detail || "Failed to connect to the AI server.");
       } finally {
         setLoading(false);

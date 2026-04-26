@@ -36,6 +36,11 @@ export default function ScanPage() {
                foodInfo={result.food_info} 
                confidence={result.confidence} 
                detectedFood={result.detected_food} 
+               // --- NEW SCIENTIFIC PROPS ADDED HERE ---
+               volume={result.volume_cm3}
+               mass={result.mass_grams}
+               kalman={result.kalman_stats}
+               metadata={result.ml_metadata}
             />
             <div id="recipes">
                <RecipeList recipes={result.matching_recipes} />
