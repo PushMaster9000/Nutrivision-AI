@@ -24,32 +24,24 @@ class AuthService:
 
     @staticmethod
     def hash_password(password) -> str:
-        """
-        Hash a password safely.
-        Handles Pydantic SecretStr, bytes, long strings, garbage inputs.
-        """
-
-        # Handle Pydantic SecretStr
+        # 1. Force the input to a clean string
         if hasattr(password, "get_secret_value"):
             password = password.get_secret_value()
+        
+        pw_str = str(password).strip()
 
-        # Handle bytes
-        if isinstance(password, bytes):
-            password = password.decode("utf-8", errors="ignore")
+        # 2. Bcrypt limit is 72 bytes. We truncate to be safe.
+        # If the input was an object by mistake, this keeps it from crashing.
+        safe_password = pw_str[:72]
 
-        # Force string
-        password = str(password)
-
-        # bcrypt max length = 72 bytes
-        password = password[:72]
-
-        if len(password) < 8:
+        if len(safe_password) < 8:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Password must be at least 8 characters"
             )
 
-        return pwd_context.hash(password)
+        return pwd_context.hash(safe_password)
+
 
     @staticmethod
     def verify_password(plain_password, hashed_password: str) -> bool:
@@ -77,8 +69,12 @@ class AuthService:
         db = get_db()
         users_collection = db["users"]
 
-        username = username.strip().lower()
-        email = email.strip().lower()
+        # Ensure username isn't None if the frontend sent 'name' instead of 'username'
+        if not username:
+             raise HTTPException(status_code=400, detail="Username is required")
+
+        username = str(username).strip().lower()
+        email = str(email).strip().lower()
 
         # Check duplicates
         existing_user = users_collection.find_one({
@@ -90,10 +86,9 @@ class AuthService:
                 raise HTTPException(status_code=409, detail="Email already registered")
             raise HTTPException(status_code=409, detail="Username already taken")
 
-        # Hash password safely
+        # Hash password
         hashed_pw = AuthService.hash_password(password)
 
-        # Generate a 6-digit verification code
         verification_code = ''.join(random.choices(string.digits, k=6))
 
         user_doc = {
@@ -105,22 +100,8 @@ class AuthService:
             "verification_code": verification_code,
             "created_at": datetime.utcnow()
         }
-
-        try:
-            result = users_collection.insert_one(user_doc)
-            user_doc["_id"] = str(result.inserted_id)
-            
-            # Send verification email securely
-            EmailService.send_verification_email(email, verification_code)
-            
-            print(f"✓ User created successfully: {email} (Unverified)")
-            return AuthService._format_user_response(user_doc)
-
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create user: {str(e)}"
-            )
+        
+        # ... rest of your insert logic ...
 
     @staticmethod
     def authenticate_user(email: str, password) -> Optional[Dict[str, Any]]:

@@ -36,12 +36,12 @@ class RecipeSaveRequest(BaseModel):
 # ==========================================
 # CORE AUTH ROUTES
 # ==========================================
-
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def signup(user_data: UserCreate):
     try:
+        # We use user_data.name because that's what your React form sends
         user = AuthService.create_user(
-            username=user_data.username,
+            username=user_data.name, # Changed from user_data.username
             email=user_data.email,
             password=user_data.password
         )
@@ -50,11 +50,12 @@ async def signup(user_data: UserCreate):
     except HTTPException:
         raise
     except Exception as e:
+        # This is where the 72-byte error is being caught
+        print(f"DEBUG ERROR: {str(e)}") 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Signup failed: {str(e)}"
         )
-
 @router.post("/verify", response_model=Token)
 async def verify_email(verify_data: VerifyEmailRequest) -> Token:
     user = AuthService.verify_user_email(verify_data.email, verify_data.code)
