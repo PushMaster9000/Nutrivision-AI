@@ -54,16 +54,17 @@ export default function CreateCommunityPost() {
       
       const cloudinaryUrl = uploadRes.data.url;
 
-      // STEP 2: Save the Recipe to MongoDB
-      const recipeData = {
-        title,
-        time,
-        calories,
-        // Convert comma-separated strings into arrays
-        ingredients: ingredients.split(',').map(item => item.trim()),
-        instructions: instructions.split('.').map(item => item.trim()).filter(i => i),
-        image_url: cloudinaryUrl
-      };
+      // STEP 3: Save the Recipe to MongoDB
+const recipeData = {
+  title,
+  time,
+  // This takes "350 kcal", removes "kcal", and turns it into a real number 350
+  calories: parseInt(String(calories).replace(/\D/g, '')) || 0, 
+  // Convert comma-separated strings into arrays
+  ingredients: ingredients.split(',').map(item => item.trim()),
+  instructions: instructions.split('.').map(item => item.trim()).filter(i => i),
+  image_url: cloudinaryUrl
+};
 
       await apiClient.post('/api/community/create-post', recipeData);
 
