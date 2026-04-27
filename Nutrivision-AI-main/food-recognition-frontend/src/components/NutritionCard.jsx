@@ -1,15 +1,7 @@
 import React from 'react';
-import { Activity, Droplets, Scale, Box, Zap, Cpu } from 'lucide-react';
+import { Activity, Droplets, Scale } from 'lucide-react';
 
-export default function NutritionCard({ 
-  foodInfo, 
-  confidence, 
-  detectedFood, 
-  volume, 
-  mass, 
-  kalman, 
-  metadata 
-}) {
+export default function NutritionCard({ foodInfo, confidence, detectedFood }) {
   if (!foodInfo) return null;
 
   return (
@@ -45,42 +37,6 @@ export default function NutritionCard({
               <span className="text-xs font-bold uppercase">Sugar</span>
             </div>
             <p className="text-xl font-bold text-slate-800 capitalize">{foodInfo.sugar_level}</p>
-          </div>
-        </div>
-
-        {/* --- ML & SENSOR TELEMETRY GRID --- */}
-        <div>
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">ML & Sensor Telemetry</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Volume */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-              <Box size={16} className="text-slate-400 mb-1" />
-              <p className="text-[10px] uppercase font-bold text-slate-500">Est. Volume</p>
-              <p className="text-sm font-bold text-slate-800">{volume > 0 ? `${volume.toFixed(1)} cm³` : '--'}</p>
-            </div>
-
-            {/* Mass */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-              <Scale size={16} className="text-slate-400 mb-1" />
-              <p className="text-[10px] uppercase font-bold text-slate-500">Calc. Mass</p>
-              <p className="text-sm font-bold text-slate-800">{mass > 0 ? `${mass.toFixed(1)} g` : '--'}</p>
-            </div>
-
-            {/* Kalman Filter */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-              <Zap size={16} className={kalman?.converged ? 'text-green-500' : 'text-amber-500'} mb-1 />
-              <p className="text-[10px] uppercase font-bold text-slate-500">Kalman</p>
-              <p className={`text-sm font-bold ${kalman?.converged ? 'text-green-600' : 'text-amber-600'}`}>
-                {kalman ? (kalman.converged ? 'Stable' : 'Stabilizing') : '--'}
-              </p>
-            </div>
-
-            {/* Inference Engine */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-              <Cpu size={16} className="text-slate-400 mb-1" />
-              <p className="text-[10px] uppercase font-bold text-slate-500">Engine</p>
-              <p className="text-sm font-bold text-slate-800 truncate w-full">{metadata?.gpu_info || 'NVIDIA T4'}</p>
-            </div>
           </div>
         </div>
 

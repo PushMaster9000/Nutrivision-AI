@@ -82,24 +82,6 @@ class PredictionRequestSchema(BaseModel):
         }
 
 
-# ==========================================
-# ML TELEMETRY SCHEMAS
-# ==========================================
-
-class MLMetadataSchema(BaseModel):
-    """Technical details from the Colab GPU engine"""
-    inference_time: float = Field(default=0.0, description="Time taken for GPU processing")
-    gpu_info: str = Field(default="NVIDIA T4", description="Hardware used")
-    voxel_method: str = Field(default="MiDaS", description="Depth estimation method")
-
-
-class KalmanFilterSchema(BaseModel):
-    """Scientific convergence data"""
-    converged: bool = Field(default=False, description="Has the measurement stabilized?")
-    uncertainty: float = Field(default=0.0, description="The error margin (lower is better)")
-    frames: int = Field(default=1, description="Number of frames processed")
-
-
 class PredictionResponseSchema(BaseModel):
     """Response model for prediction endpoint"""
     detected_food: str = Field(..., description="Detected food name")
@@ -109,12 +91,6 @@ class PredictionResponseSchema(BaseModel):
         default=[],
         description="Recipes matching appliances and health constraints"
     )
-    
-    # --- Scientific Fields Added Here ---
-    volume_cm3: float = Field(default=0.0, description="Estimated volume in cubic centimeters")
-    mass_grams: float = Field(default=0.0, description="Estimated weight")
-    kalman_stats: Optional[KalmanFilterSchema] = None
-    ml_metadata: Optional[MLMetadataSchema] = None
     
     class Config:
         json_schema_extra = {
