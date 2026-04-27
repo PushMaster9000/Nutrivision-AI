@@ -26,12 +26,14 @@ class AuthService:
     def hash_password(password) -> str:
         """
         Hash a password safely with a 72-byte limit for bcrypt.
+        Truncates by bytes, not characters, to handle multi-byte UTF-8 properly.
         """
         if hasattr(password, "get_secret_value"):
             password = password.get_secret_value()
         
         pw_str = str(password).strip()
-        safe_password = pw_str[:72]
+        # Truncate by BYTES, not characters (important for UTF-8 multi-byte chars)
+        safe_password = pw_str.encode('utf-8')[:72].decode('utf-8', errors='ignore')
 
         if len(safe_password) < 8:
             raise HTTPException(
@@ -45,6 +47,7 @@ class AuthService:
     def verify_password(plain_password, hashed_password: str) -> bool:
         """
         Verify a plain text password against its hash.
+        Truncates by bytes, not characters, to handle multi-byte UTF-8 properly.
         """
         if hasattr(plain_password, "get_secret_value"):
             plain_password = plain_password.get_secret_value()
@@ -52,7 +55,8 @@ class AuthService:
         if isinstance(plain_password, bytes):
             plain_password = plain_password.decode("utf-8", errors="ignore")
 
-        plain_password = str(plain_password)[:72]
+        # Truncate by BYTES, not characters (important for UTF-8 multi-byte chars)
+        plain_password = str(plain_password).encode('utf-8')[:72].decode('utf-8', errors='ignore')
 
         try:
             return pwd_context.verify(plain_password, hashed_password)
