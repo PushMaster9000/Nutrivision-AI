@@ -14,7 +14,8 @@ from fastapi import HTTPException, status
 from app.services.email_service import EmailService
 
 # Bcrypt password hashing configuration
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt__truncate_error=False silences the 72-byte truncation warning
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
 
 
 class AuthService:
@@ -28,10 +29,16 @@ class AuthService:
         Hash a password safely with a 72-byte limit for bcrypt.
         Truncates by bytes, not characters, to handle multi-byte UTF-8 properly.
         """
+        # Extract secret value if Pydantic SecretStr
         if hasattr(password, "get_secret_value"):
             password = password.get_secret_value()
         
+        # Convert to string and strip whitespace
         pw_str = str(password).strip()
+        
+        # DEBUG: Log what we're hashing (without revealing the actual password)
+        print(f"[DEBUG] Password type: {type(password).__name__}, Length: {len(pw_str)}, Bytes: {len(pw_str.encode('utf-8'))}")
+        
         # Truncate by BYTES, not characters (important for UTF-8 multi-byte chars)
         safe_password = pw_str.encode('utf-8')[:72].decode('utf-8', errors='ignore')
 
@@ -75,6 +82,11 @@ class AuthService:
 
         username = str(username).strip().lower()
         email = str(email).strip().lower()
+        
+        # Ensure password is a plain string, not an object
+        if hasattr(password, "get_secret_value"):
+            password = password.get_secret_value()
+        password = str(password).strip()
 
         # Check duplicates
         existing_user = users_collection.find_one({
