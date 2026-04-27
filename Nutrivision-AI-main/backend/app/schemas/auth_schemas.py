@@ -7,22 +7,21 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime
 
-
 class UserCreate(BaseModel):
     """Schema for user signup request"""
-    username: str = Field(..., min_length=3, max_length=50, description="Username for account")
+    # Change 'username' to 'name' here
+    name: str = Field(..., min_length=3, max_length=50, description="Name for account")
     email: EmailStr = Field(..., description="Email address")
     password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
     
     class Config:
         json_schema_extra = {
             "example": {
-                "username": "samuel",
+                "name": "samuel", # Update this too
                 "email": "samuel@example.com",
                 "password": "SecurePassword123!"
             }
         }
-
 
 class UserLogin(BaseModel):
     """Schema for user login request"""
