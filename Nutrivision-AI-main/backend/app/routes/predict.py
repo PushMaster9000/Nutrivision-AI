@@ -56,15 +56,20 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
                 raise HTTPException(status_code=400, detail="Invalid base64 image data.")
 
             # Forward to Sam's Colab tunnel as a multipart/form-data file
+            # Forward to Sam's Colab tunnel as a multipart/form-data file
             try:
                 # requests automatically sets the multipart headers when using 'files'
                 files = {"file": ("food_image.jpg", image_bytes, "image/jpeg")}
+                
+                # --- THE FIX: Bypasses the ngrok "Visit Site" warning screen ---
+                headers = {"ngrok-skip-browser-warning": "true"}
                 
                 # Sam specifically asked for a POST to [NGROK_URL]/predict
                 colab_response = requests.post(
                     f"{ngrok_url}/predict", 
                     files=files, 
-                    timeout=20  # Giving Colab 20 seconds to process the heavy YOLO/MiDaS models
+                    headers=headers, # <--- Added this
+                    timeout=20  
                 )
                 colab_response.raise_for_status()
                 
