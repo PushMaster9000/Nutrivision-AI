@@ -68,12 +68,26 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
                 )
                 colab_response.raise_for_status()
                 
-                # Parse Sam's JSON answer
-                ml_data = colab_response.json()
+                # --- THE BULLETPROOF PARSING FIX ---
+                raw_ml_data = colab_response.json()
+                
+                # If Colab sends a list (e.g. [{"class": "apple"}]), grab the first item.
+                # If it sends a flat dictionary, just use it directly.
+                if isinstance(raw_ml_data, list):
+                    if len(raw_ml_data) == 0:
+                        raise HTTPException(status_code=400, detail="ML model returned an empty list.")
+                    ml_data = raw_ml_data[0]
+                else:
+                    ml_data = raw_ml_data
+                
+                # Check if the ML model explicitly sent an error
+                if "error" in ml_data:
+                     raise HTTPException(status_code=400, detail=f"ML Error: {ml_data['error']}")
                 
                 # Extract the food name (Fallback to 'apple' if the key name doesn't match exactly)
                 predicted_food = ml_data.get("food", ml_data.get("class", "apple")).lower()
                 confidence = float(ml_data.get("confidence", 0.95))
+                # ------------------------------------
 
             except requests.exceptions.ConnectionError:
                 raise HTTPException(
