@@ -1,9 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, Loader2 } from 'lucide-react';
-import axios from 'axios';
-
-// Replace this with your actual Hugging Face or Local URL
-const API_BASE_URL = "http://localhost:8000"; 
+import apiClient from '../api/client'; // <--- WE CHANGED THIS: Now using your real client!
 
 export default function CameraUpload({ appliances, constraints, onResult }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -51,8 +48,8 @@ export default function CameraUpload({ appliances, constraints, onResult }) {
       const base64Image = reader.result;
 
       try {
-        // 2. Send to FastAPI Backend
-        const response = await axios.post(`${API_BASE_URL}/api/v1/predict`, {
+        // 2. Send to FastAPI Backend using the official apiClient!
+        const response = await apiClient.post('/api/v1/predict', {
           image_base64: base64Image,
           health_constraints: constraints || [],
           available_appliances: appliances || []
