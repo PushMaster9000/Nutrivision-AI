@@ -46,7 +46,11 @@ async def signup(user_data: UserCreate):
             password=user_data.password
         )
         
-        return {"message": "Verification code sent to email", "email": user_data.email}
+        return {
+            "message": "User created", 
+            "email": user_data.email,
+            "is_verified": user.get("is_verified", False)
+        }
     except HTTPException:
         raise
     except Exception as e:

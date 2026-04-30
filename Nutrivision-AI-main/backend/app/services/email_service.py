@@ -40,8 +40,8 @@ class EmailService:
             """
             msg.attach(MIMEText(body, 'plain'))
             
-            # Connect to SMTP server
-            server = smtplib.SMTP(smtp_server, smtp_port)
+            # Connect to SMTP server with a timeout so it doesn't hang the frontend
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=5)
             server.starttls()
             server.login(smtp_email, smtp_password)
             server.send_message(msg)

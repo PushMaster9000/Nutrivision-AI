@@ -50,7 +50,7 @@ export function UserProvider({ children }) {
         password: password
       });
       
-      return true;
+      return response.data;
     } catch (error) {
       throw new Error(parseApiError(error, "Signup failed. Please check your details."));
     }

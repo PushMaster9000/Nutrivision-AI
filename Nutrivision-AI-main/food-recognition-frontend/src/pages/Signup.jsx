@@ -5,7 +5,7 @@ import { useUser } from '../context/UserContext';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup, verifyEmail } = useUser(); // Use the real signup from UserContext
+  const { signup, verifyEmail, login } = useUser(); // Use the real signup from UserContext
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -41,10 +41,16 @@ export default function Signup() {
     setLoading(true);
     try {
       // Call the REAL signup API through UserContext
-      const success = await signup(formData.name, formData.email, formData.password);
-      if (success) {
-          setIsVerifying(true);
-          setError('');
+      const responseData = await signup(formData.name, formData.email, formData.password);
+      if (responseData) {
+          if (responseData.is_verified) {
+              // Bypassed email verification, auto login
+              await login(formData.email, formData.password);
+              navigate('/dashboard');
+          } else {
+              setIsVerifying(true);
+              setError('');
+          }
       }
       setLoading(false);
     } catch (err) {

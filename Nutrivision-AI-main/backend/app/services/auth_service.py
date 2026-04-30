@@ -117,7 +117,16 @@ class AuthService:
             user_doc["_id"] = str(result.inserted_id)
             
             # Send verification email
-            EmailService.send_verification_email(email, verification_code)
+            email_sent = EmailService.send_verification_email(email, verification_code)
+            
+            # Auto-verify if email fails (e.g. Render blocks SMTP)
+            if not email_sent:
+                print(f"[WARNING] Auto-verifying {email} due to email delivery failure")
+                users_collection.update_one(
+                    {"_id": result.inserted_id},
+                    {"$set": {"is_verified": True}}
+                )
+                user_doc["is_verified"] = True
             
             print(f"✓ User created successfully: {email}")
             return AuthService._format_user_response(user_doc)
@@ -143,11 +152,12 @@ class AuthService:
         if not AuthService.verify_password(password, stored_password):
             return None
 
-        if not user.get("is_verified", False):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Please verify your email to log in"
-            )
+        # Verification check removed to allow users who failed to receive emails to log in
+        # if not user.get("is_verified", False):
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Please verify your email to log in"
+        #     )
 
         return AuthService._format_user_response(user)
 
@@ -186,7 +196,8 @@ class AuthService:
             "username": user.get("username"),
             "email": user.get("email"),
             "role": user.get("role", "user"),
-            "created_at": user.get("created_at")
+            "created_at": user.get("created_at"),
+            "is_verified": user.get("is_verified", False)
         }
 
     # ================= PROFILE & SECURITY ================= #
