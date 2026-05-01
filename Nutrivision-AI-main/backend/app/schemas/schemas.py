@@ -82,31 +82,17 @@ class PredictionRequestSchema(BaseModel):
         }
 
 
-class PredictionResponseSchema(BaseModel):
-    """Response model for prediction endpoint"""
-    detected_food: str = Field(..., description="Detected food name")
+class NutritionSchema(BaseModel):
+    cal: float = Field(..., description="Calories")
+    protein: float = Field(..., description="Protein in grams")
+    carbs: float = Field(..., description="Carbohydrates in grams")
+    fat: float = Field(..., description="Fat in grams")
+
+class MLPredictionItemSchema(BaseModel):
+    food: str = Field(..., description="Detected food name")
     confidence: float = Field(..., description="Prediction confidence (0-1)")
-    food_info: FoodCalorieSchema = Field(..., description="Food nutritional info")
-    matching_recipes: List[RecipeSchema] = Field(
-        default=[],
-        description="Recipes matching appliances and health constraints"
-    )
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "detected_food": "apple",
-                "confidence": 0.95,
-                "food_info": {
-                    "name": "apple",
-                    "type": "fruit",
-                    "calories_per_100g": 52,
-                    "sugar_level": "medium",
-                    "health_tags": ["high-fiber"]
-                },
-                "matching_recipes": []
-            }
-        }
+    nutrition: NutritionSchema = Field(..., description="Nutritional info")
+    portion_g: float = Field(..., description="Portion size in grams")
 
 
 class HealthCheckSchema(BaseModel):

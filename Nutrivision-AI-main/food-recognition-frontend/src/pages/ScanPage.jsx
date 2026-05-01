@@ -30,16 +30,11 @@ export default function ScanPage() {
         </div>
 
         {/* Results Area */}
-        {result && (
-          <div className="animate-fade-in space-y-10">
-            <NutritionCard 
-               foodInfo={result.food_info} 
-               confidence={result.confidence} 
-               detectedFood={result.detected_food} 
-            />
-            <div id="recipes">
-               <RecipeList recipes={result.matching_recipes} />
-            </div>
+        {result && Array.isArray(result) && (
+          <div className="animate-fade-in space-y-10 mt-8">
+            {result.map((item, index) => (
+              <NutritionCard key={index} data={item} />
+            ))}
           </div>
         )}
       </div>

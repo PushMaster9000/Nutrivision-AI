@@ -7,27 +7,37 @@ Bridged to Colab Microservice via ngrok.
 import base64
 import requests
 from fastapi import APIRouter, HTTPException
-from app.schemas.schemas import PredictionRequestSchema, PredictionResponseSchema
+from app.schemas.schemas import PredictionRequestSchema, MLPredictionItemSchema
 from app.services.calorie_service import CalorieService
 from app.services.recipe_service import RecipeService
 from app.config import ML_CONFIG
+from typing import List
 
 router = APIRouter(prefix="/api/v1", tags=["Prediction"])
 
 
-@router.post("/predict", response_model=PredictionResponseSchema)
-async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSchema:
+@router.post("/predict", response_model=List[MLPredictionItemSchema])
+async def predict_food(request: PredictionRequestSchema) -> List[MLPredictionItemSchema]:
     """
     Main prediction endpoint.
     Receives base64 image from React, forwards as multipart file to Sam's Colab tunnel,
-    fetches nutritional info, and returns matching recipes.
+    and returns the exact nutrition list directly from the ML microservice.
     """
     try:
         # Step 1: Predict the food
         if request.food_name:
             # Deterministic testing mode (skips ML)
-            predicted_food = request.food_name.lower()
-            confidence = 1.0
+            return [{
+                "food": request.food_name.title(),
+                "confidence": 1.0,
+                "nutrition": {
+                    "cal": 100.0,
+                    "protein": 5.0,
+                    "carbs": 10.0,
+                    "fat": 1.0
+                },
+                "portion_g": 100.0
+            }]
         else:
             # LIVE ML MICROSERVICE MODE
             ngrok_url = ML_CONFIG.get("ngrok_url")
@@ -56,44 +66,33 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
                 raise HTTPException(status_code=400, detail="Invalid base64 image data.")
 
             # Forward to Sam's Colab tunnel as a multipart/form-data file
-            # Forward to Sam's Colab tunnel as a multipart/form-data file
             try:
-                # requests automatically sets the multipart headers when using 'files'
                 files = {"file": ("food_image.jpg", image_bytes, "image/jpeg")}
-                
-                # --- THE FIX: Bypasses the ngrok "Visit Site" warning screen ---
                 headers = {"ngrok-skip-browser-warning": "true"}
                 
-                # Sam specifically asked for a POST to [NGROK_URL]/predict
                 colab_response = requests.post(
                     f"{ngrok_url}/predict", 
                     files=files, 
-                    headers=headers, # <--- Added this
-                    timeout=20  
+                    headers=headers,
+                    timeout=30  
                 )
                 colab_response.raise_for_status()
                 
-                # --- THE BULLETPROOF PARSING FIX ---
                 raw_ml_data = colab_response.json()
                 
-                # If Colab sends a list (e.g. [{"class": "apple"}]), grab the first item.
-                # If it sends a flat dictionary, just use it directly.
-                if isinstance(raw_ml_data, list):
-                    if len(raw_ml_data) == 0:
-                        raise HTTPException(status_code=400, detail="ML model returned an empty list.")
-                    ml_data = raw_ml_data[0]
-                else:
-                    ml_data = raw_ml_data
-                
-                # Check if the ML model explicitly sent an error
-                if "error" in ml_data:
-                     raise HTTPException(status_code=400, detail=f"ML Error: {ml_data['error']}")
-                
-                # Extract the food name (Fallback to 'apple' if the key name doesn't match exactly)
-                predicted_food = ml_data.get("food", ml_data.get("class", "apple")).lower()
-                confidence = float(ml_data.get("confidence", 0.95))
-                # ------------------------------------
+                if isinstance(raw_ml_data, dict) and "error" in raw_ml_data:
+                     raise HTTPException(status_code=400, detail=f"ML Error: {raw_ml_data['error']}")
+                elif isinstance(raw_ml_data, list) and len(raw_ml_data) > 0 and isinstance(raw_ml_data[0], dict) and "error" in raw_ml_data[0]:
+                     raise HTTPException(status_code=400, detail=f"ML Error: {raw_ml_data[0]['error']}")
+                     
+                if not isinstance(raw_ml_data, list):
+                    # Wrap single object in list if necessary to conform to spec
+                    raw_ml_data = [raw_ml_data]
 
+                return raw_ml_data
+
+            except HTTPException:
+                raise
             except requests.exceptions.ConnectionError:
                 raise HTTPException(
                     status_code=502, 
@@ -109,45 +108,6 @@ async def predict_food(request: PredictionRequestSchema) -> PredictionResponseSc
                     status_code=502, 
                     detail=f"Error reading from Colab microservice: {str(e)}"
                 )
-
-        # Step 2: Fetch food information from MongoDB
-      # Safely try to get DB info. If it crashes, catch the error and set to None!
-        try:
-            food_info = CalorieService.get_food_by_name(predicted_food)
-        except Exception:
-            food_info = None  # <--- This safely triggers the dummy dictionary below
-        
-        # If it's not in the DB, satisfy the strict Pydantic schema so FastAPI doesn't crash
-        if not food_info:
-            food_info = {
-                "name": predicted_food.title(),
-                "type": "custom",            
-                "calories_per_100g": 0,      
-                "calories": 0,               
-                "protein": 0,                
-                "carbs": 0,                  
-                "fat": 0,                    
-                "sugar_level": "low",        
-                "serving_size": "unknown",
-                "description": "Custom ingredient detected via AI."
-            }
-        
-        # Step 3: Fetch and filter recipes
-        matching_recipes = RecipeService.get_filtered_recipes(
-            predicted_food,
-            available_appliances=request.available_appliances if request.available_appliances else None,
-            health_constraints=request.health_constraints if request.health_constraints else None
-        )
-        
-        # Step 4: Build and return the final payload to React
-        response = PredictionResponseSchema(
-            detected_food=predicted_food,
-            confidence=confidence,
-            food_info=food_info,
-            matching_recipes=matching_recipes
-        )
-        
-        return response
     
     except HTTPException:
         raise

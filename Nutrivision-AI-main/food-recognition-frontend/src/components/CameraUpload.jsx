@@ -34,6 +34,8 @@ export default function CameraUpload({ appliances, constraints, onResult }) {
   };
 
   const processFile = (file) => {
+    if (loading) return; // Prevent multiple requests
+    
     if (!file.type.startsWith('image/')) {
       alert('Please upload an image file (JPG, PNG, WEBP)');
       return;
