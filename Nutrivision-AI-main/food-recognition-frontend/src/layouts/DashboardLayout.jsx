@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom'; 
+import { NavLink, Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { LayoutDashboard, ScanLine, ChefHat, History, User, LogOut, Wand2, Users, UtensilsCrossed, Menu, X } from 'lucide-react';
-import { useUser } from '../context/UserContext'; 
+import { useUser } from '../context/UserContext';
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
-  const { user, logout } = useUser(); 
+  const { user, logout } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   if (!user) {
-      return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Extra safety check so React doesn't crash on name parsing
@@ -17,14 +17,14 @@ export default function DashboardLayout() {
 
   // CLEANED UP: The reusable template for links
   const NavItem = ({ to, icon: Icon, label, end = false }) => (
-    <NavLink 
-      to={to} 
-      end={end} 
+    <NavLink
+      to={to}
+      end={end}
       onClick={() => setIsMobileMenuOpen(false)} // Close menu on click on mobile
       className={({ isActive }) => `
         flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-1 font-medium
-        ${isActive 
-          ? 'bg-brand-green/10 text-brand-green shadow-[inset_3px_0_0_0_#10b981]' 
+        ${isActive
+          ? 'bg-brand-green/10 text-brand-green shadow-[inset_3px_0_0_0_#10b981]'
           : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
         }
       `}
@@ -36,16 +36,16 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-white font-sans transition-colors duration-300">
-      
+
       {/* MOBILE TOP BAR */}
       <div className="lg:hidden fixed top-0 w-full bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-gray-800 z-50 flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
-           <div className="bg-brand-green p-1.5 rounded-lg">
-             <ChefHat size={20} className="text-white" />
-           </div>
-           <span className="font-bold text-lg tracking-tight">NutriVision</span>
+          <div className="bg-brand-green p-1.5 rounded-lg">
+            <ChefHat size={20} className="text-white" />
+          </div>
+          <span className="font-bold text-lg tracking-tight">NutriVision</span>
         </div>
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
         >
@@ -55,8 +55,8 @@ export default function DashboardLayout() {
 
       {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -68,19 +68,19 @@ export default function DashboardLayout() {
         lg:translate-x-0 lg:flex
       `}>
         <div className="flex items-center gap-3 mb-10 px-2 hidden lg:flex">
-           <div className="bg-brand-green p-1.5 rounded-lg">
-             <ChefHat size={20} className="text-white" />
-           </div>
-           <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">NutriVision</span>
+          <div className="bg-brand-green p-1.5 rounded-lg">
+            <ChefHat size={20} className="text-white" />
+          </div>
+          <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">NutriVision</span>
         </div>
 
         {/* User Card */}
         <div className="flex items-center gap-3 mb-8 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800 mt-12 lg:mt-0">
           <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center font-bold text-sm text-gray-500 overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
             {user.photo ? (
-                 <img src={user.photo} alt="User" className="w-full h-full object-cover" />
+              <img src={user.photo} alt="User" className="w-full h-full object-cover" />
             ) : (
-                 <span className="text-brand-green">{initials}</span>
+              <span className="text-brand-green">{initials}</span>
             )}
           </div>
           <div className="overflow-hidden">
@@ -99,8 +99,8 @@ export default function DashboardLayout() {
           <NavItem to="/dashboard/profile" icon={User} label="Profile" />
         </nav>
 
-        <button 
-          onClick={logout} 
+        <button
+          onClick={logout}
           className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition mt-auto font-medium"
         >
           <LogOut size={20} /> Log Out

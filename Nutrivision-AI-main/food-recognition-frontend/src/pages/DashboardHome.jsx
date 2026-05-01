@@ -77,8 +77,8 @@ export default function DashboardHome() {
         <button
           onClick={() => setShowTracker(!showTracker)}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 ${showTracker
-              ? 'bg-gray-800 text-white'
-              : 'bg-brand-green text-white hover:bg-brand-green-hover'
+            ? 'bg-gray-800 text-white'
+            : 'bg-brand-green text-white hover:bg-brand-green-hover'
             }`}
         >
           <LayoutDashboard size={20} />
@@ -112,8 +112,8 @@ export default function DashboardHome() {
             <Heart size={16} className={dietStatus.score === "A+" ? "text-brand-green" : ""} /> Diet Score
           </div>
           <p className={`text-4xl font-bold ${dietStatus.score === "A+" ? "text-brand-green" :
-              dietStatus.score === "C" ? "text-red-500" :
-                "text-gray-900 dark:text-white"
+            dietStatus.score === "C" ? "text-red-500" :
+              "text-gray-900 dark:text-white"
             }`}>
             {dietStatus.score}
           </p>
