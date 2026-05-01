@@ -43,14 +43,18 @@ export default function RecommendedRecipes({ onAction }) {
       const payload = { ...recipe, date: localDate };
 
       // 3. Send the updated payload
-      await apiClient.post('/api/auth/toggle-save', payload);
+      const response = await apiClient.post('/api/auth/toggle-save', payload);
       
-      showToast(`🥘 Saved to Cookbook & 🔥 Logged Calories!`);
+      if (response.data.status === 'unsaved') {
+        showToast(`Removed from Cookbook & Calories Deducted`, 'success');
+      } else {
+        showToast(`🥘 Saved to Cookbook & 🔥 Logged Calories!`);
+      }
 
       if (onAction) onAction();
 
     } catch (error) {
-      showToast("Failed to log meal.", "error");
+      showToast("Failed to update meal.", "error");
     }
   };
 

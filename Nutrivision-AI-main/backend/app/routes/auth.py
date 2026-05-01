@@ -33,6 +33,7 @@ class RecipeSaveRequest(BaseModel):
     image: str
     ingredients: List[str]
     instructions: List[str]
+    date: Optional[str] = None
 # ==========================================
 # CORE AUTH ROUTES
 # ==========================================
