@@ -24,13 +24,14 @@ export default function NutritionCard({ data }) {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <div className="flex items-center gap-2 text-brand-orange mb-1">
+            {/* CHANGED THIS LINE BELOW: text-brand-orange to text-blue-600 */}
+            <div className="flex items-center gap-2 text-blue-600 mb-1">
               <Flame size={16} />
               <span className="text-xs font-bold uppercase">Calories</span>
             </div>
             <p className="text-xl font-bold text-slate-800">{data.nutrition.cal} <span className="text-sm font-normal text-slate-500">kcal</span></p>
           </div>
-          
+
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
             <div className="flex items-center gap-2 text-red-500 mb-1">
               <Beef size={16} />

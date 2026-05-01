@@ -8,7 +8,7 @@ const DEFAULT_PANTRY = [
   'Vinegar', 'Paprika', 'Cumin', 'Oregano', 'Chili Powder', 'Honey'
 ];
 
-export default function GenerateRecipes() {
+export default function GenerateRecipes({ initialIngredients = [], hideHeader = false }) {
   const [pantryIngredients, setPantryIngredients] = useState(() => {
     const saved = localStorage.getItem('custom_pantry');
     return saved ? JSON.parse(saved) : DEFAULT_PANTRY;
@@ -20,7 +20,16 @@ export default function GenerateRecipes() {
     localStorage.setItem('custom_pantry', JSON.stringify(pantryIngredients));
   }, [pantryIngredients]);
 
-  const [selectedIngredients, setSelectedIngredients] = useState([]);
+  const [selectedIngredients, setSelectedIngredients] = useState(initialIngredients);
+
+  useEffect(() => {
+    if (initialIngredients && initialIngredients.length > 0) {
+      setSelectedIngredients(prev => {
+        const newItems = initialIngredients.filter(item => !prev.includes(item));
+        return [...prev, ...newItems];
+      });
+    }
+  }, [initialIngredients]);
   const [customInput, setCustomInput] = useState('');
   const [isCommonExpanded, setIsCommonExpanded] = useState(false);
 
@@ -176,14 +185,16 @@ export default function GenerateRecipes() {
   };
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-8 relative">
-      <header>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
-           <Wand2 className="text-brand-green" /> Generate Recipes
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Select what you have in your kitchen, and let our AI create the perfect meal.
-        </p>
-      </header>
+      {!hideHeader && (
+        <header>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
+             <Wand2 className="text-brand-green" /> Generate Recipes
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Select what you have in your kitchen, and let our AI create the perfect meal.
+          </p>
+        </header>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         

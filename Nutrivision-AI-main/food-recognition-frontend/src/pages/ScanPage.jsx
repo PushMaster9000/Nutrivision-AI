@@ -3,7 +3,7 @@ import { ScanLine } from 'lucide-react';
 import CameraUpload from '../components/CameraUpload';
 import NutritionCard from '../components/NutritionCard';
 import RecipeList from '../components/RecipeList';
-
+import GenerateRecipes from './GenerateRecipes';
 export default function ScanPage() {
   const [result, setResult] = useState(null);
 
@@ -32,9 +32,19 @@ export default function ScanPage() {
         {/* Results Area */}
         {result && Array.isArray(result) && (
           <div className="animate-fade-in space-y-10 mt-8">
-            {result.map((item, index) => (
-              <NutritionCard key={index} data={item} />
-            ))}
+            <div className="grid gap-6">
+              {result.map((item, index) => (
+                <NutritionCard key={index} data={item} />
+              ))}
+            </div>
+            
+            {/* Embedded Recipe Generator */}
+            <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+              <GenerateRecipes 
+                initialIngredients={[...new Set(result.map(item => item.food))]} 
+                hideHeader={true} 
+              />
+            </div>
           </div>
         )}
       </div>
