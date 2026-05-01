@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from app.services.ai_service import generate_recipes
 from app.utils.jwt_utils import get_current_user
 from app.database import get_db
+import re
 
 
 router = APIRouter(prefix="/api/v1", tags=["Recipes"])
@@ -152,13 +153,14 @@ async def delete_saved_recipe(
         
         date_added = result.get("date_added")
         
-        # Only deduct calories if deleted on the SAME day it was added
-        if date and date_added == date:
+        # Only deduct calories if deleted on the SAME day it was added (or missing for older saves)
+        if date and (date_added == date or date_added is None):
             cal_str = str(result.get("calories", "0"))
             digits = re.findall(r'\d+', cal_str)
             cal_value = int(digits[0]) if digits else 0
             
             if cal_value > 0:
+                # Deduct calories from today's log (since that's the 'date' passed from frontend)
                 db["calorie_logs"].update_one(
                     {"user_email": current_user["email"], "date": date},
                     {"$inc": {"total_calories": -cal_value}}
