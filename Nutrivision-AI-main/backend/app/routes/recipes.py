@@ -135,6 +135,7 @@ async def get_saved_recipes(
 @router.delete("/delete/{title}", status_code=status.HTTP_200_OK)
 async def delete_saved_recipe(
     title: str,
+    date: str = Query(None, description="Local date from frontend"),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Delete a specific saved recipe from the user's profile"""
@@ -148,6 +149,21 @@ async def delete_saved_recipe(
         )
         if not result:
              raise HTTPException(status_code=404, detail="Recipe not found in your cookbook")
+        
+        date_added = result.get("date_added")
+        
+        # Only deduct calories if deleted on the SAME day it was added
+        if date and date_added == date:
+            cal_str = str(result.get("calories", "0"))
+            digits = re.findall(r'\d+', cal_str)
+            cal_value = int(digits[0]) if digits else 0
+            
+            if cal_value > 0:
+                db["calorie_logs"].update_one(
+                    {"user_email": current_user["email"], "date": date},
+                    {"$inc": {"total_calories": -cal_value}}
+                )
+                
         return {"message": f"Successfully deleted '{title}' from your cookbook!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete recipe: {str(e)}")

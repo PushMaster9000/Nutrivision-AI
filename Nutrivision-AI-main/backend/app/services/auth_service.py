@@ -256,37 +256,28 @@ class AuthService:
 
         existing_save = db["saved_recipes"].find_one({"user_email": email, "title": recipe_title})
         
+        if existing_save:
+            return {"status": "already_saved", "title": recipe_title}
+            
         # Extract calories
         cal_str = str(recipe_data.get("calories", "0"))
         digits = re.findall(r'\d+', cal_str)
         cal_value = int(digits[0]) if digits else 0
         
-        if existing_save:
-            # It's already saved, so we UNSAVE it and SUBTRACT calories
-            db["saved_recipes"].delete_one({"_id": existing_save["_id"]})
-            
-            if cal_value > 0:
-                db["calorie_logs"].update_one(
-                    {"user_email": email, "date": today_str},
-                    {"$inc": {"total_calories": -cal_value}},
-                    upsert=True
-                )
-                
-            return {"status": "unsaved", "title": recipe_title}
-        else:
-            # It's not saved, so we SAVE it and ADD calories
-            recipe_data["user_email"] = email
-            recipe_data["title"] = recipe_title
-            db["saved_recipes"].insert_one(recipe_data)
+        # It's not saved, so we SAVE it and ADD calories
+        recipe_data["user_email"] = email
+        recipe_data["title"] = recipe_title
+        recipe_data["date_added"] = today_str
+        db["saved_recipes"].insert_one(recipe_data)
 
-            if cal_value > 0:
-                db["calorie_logs"].update_one(
-                    {"user_email": email, "date": today_str},
-                    {"$inc": {"total_calories": cal_value}},
-                    upsert=True
-                )
-                
-            return {"status": "saved", "title": recipe_title}
+        if cal_value > 0:
+            db["calorie_logs"].update_one(
+                {"user_email": email, "date": today_str},
+                {"$inc": {"total_calories": cal_value}},
+                upsert=True
+            )
+            
+        return {"status": "saved", "title": recipe_title}
         
     @staticmethod
     def get_saved_recipe_titles(email: str) -> list:

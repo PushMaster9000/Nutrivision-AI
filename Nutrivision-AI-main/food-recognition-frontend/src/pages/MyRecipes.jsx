@@ -48,7 +48,10 @@ export default function MyRecipes() {
 
     try {
       // Use encodeURIComponent in case the recipe title has spaces or special characters
-      await apiClient.delete(`/api/v1/delete/${encodeURIComponent(recipeTitle)}`);
+      const d = new Date();
+      const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      
+      await apiClient.delete(`/api/v1/delete/${encodeURIComponent(recipeTitle)}?date=${localDate}`);
       showToast(`'${recipeTitle}' has been tucked away for good! 🗑️`, 'success');
     } catch (error) {
       console.error("Failed to delete recipe", error);

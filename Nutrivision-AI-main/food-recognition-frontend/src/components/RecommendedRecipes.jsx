@@ -45,8 +45,8 @@ export default function RecommendedRecipes({ onAction }) {
       // 3. Send the updated payload
       const response = await apiClient.post('/api/auth/toggle-save', payload);
       
-      if (response.data.status === 'unsaved') {
-        showToast(`Removed from Cookbook & Calories Deducted`, 'success');
+      if (response.data.status === 'already_saved') {
+        showToast(`Already in your cookbook!`, 'info');
       } else {
         showToast(`🥘 Saved to Cookbook & 🔥 Logged Calories!`);
       }
